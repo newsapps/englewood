@@ -45,5 +45,4 @@ if not os.path.exists(OUTPUT_PATH):
 # 'asian', 'black', 'hispanic', or 'white'.
 dots = DotDensityPlotter(INPUT_PATH, OUTPUT_PATH, get_data, 25, masks=MASKS)
 dots.plot()
-dots.cleanup()
 

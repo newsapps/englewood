@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import random
 import shutil
 
@@ -19,10 +20,13 @@ class DotDensityPlotter(object):
         output directory, a callback to fetch data (takes an OGR Feature
         as an argument) and the number of units each dot should represent.
         """
-        self.source = ogr.Open(source)
+        self.source = ogr.Open(source, False)
         self.source_layer = self.source.GetLayer(0)
 
-        shutil.rmtree(dest)
+        try:
+            shutil.rmtree(dest)
+        except OSError:
+            pass
 
         driver = ogr.GetDriverByName('ESRI Shapefile')
         self.dest = driver.CreateDataSource(dest)
@@ -34,23 +38,47 @@ class DotDensityPlotter(object):
         self.data_callback = data_callback
         self.dot_size = dot_size
 
-        self.mask_features = []
-        self.mask_envelopes = []
+        # If using masks, generate a masked version of the input shapes
+        if masks:
+            try:
+                shutil.rmtree('temp_masked')
+            except OSError:
+                pass
 
-        for mask in masks:
-            geo = ogr.Open(mask)
-            layer = geo.GetLayer(0)
+            driver = ogr.GetDriverByName('ESRI Shapefile')
+            masked = driver.CreateDataSource('temp_masked')
+            masked_layer = masked.CreateLayer('temp_masked', geom_type=ogr.wkbMultiPolygon)
+            
+            for i in range(self.source_layer.GetLayerDefn().GetFieldCount()):
+                masked_layer.CreateField(self.source_layer.GetLayerDefn().GetFieldDefn(i))
 
-            for feature in layer:
-                self.mask_features.append(feature)
+            mask_features = []
 
-                minx, maxx, miny, maxy = feature.GetGeometryRef().GetEnvelope()
-                wkt = 'POLYGON((%s %s,%s %s,%s %s,%s %s,%s %s))' % \
-                    (minx, miny, minx, maxy,
-                    maxx, maxy, maxx, miny,
-                    minx, miny)
+            for mask in masks:
+                geo = ogr.Open(mask)
+                layer = geo.GetLayer(0)
 
-                self.mask_envelopes.append(ogr.CreateGeometryFromWkt(wkt))
+                for feature in layer:
+                    mask_features.append(feature)
+
+            for feature in self.source_layer:
+                masked_feature = ogr.Feature(feature_def=self.source_layer.GetLayerDefn())
+                masked_feature.SetFrom(feature)
+
+                masked_geometry = feature.GetGeometryRef().Clone()
+
+                for mask_feature in mask_features:
+                    masked_geometry = masked_geometry.Difference(mask_feature.GetGeometryRef())
+     
+                masked_feature.SetGeometryDirectly(masked_geometry)
+                masked_layer.CreateFeature(masked_feature)
+
+            masked_layer.SyncToDisk()
+
+            # Substitute masked shapes for input shapes
+            self.source = masked
+            self.source_layer = masked_layer
+            self.source_layer.ResetReading()
 
     def _plot(self, feature):
         """
@@ -74,21 +102,6 @@ class DotDensityPlotter(object):
 
             f.Destroy()
 
-    def is_masked(self, point):
-        """
-        Test if a point is occluded by any mask.
-        """
-        for (i, feature) in enumerate(self.mask_features):
-            envelope = self.mask_envelopes[i]
-
-            if not envelope.Contains(point):
-                continue
-
-            if feature.GetGeometryRef().Contains(point):
-                return True
-    
-        return False
-
     def plot(self):
         """
         Plots dots for all features in the source layer.
@@ -100,13 +113,14 @@ class DotDensityPlotter(object):
 
             feature = self.source_layer.GetNextFeature()
 
-    def random_point_in_feature(self, feature):
+    @classmethod
+    def random_point_in_feature(cls, feature):
         """
         Generate a random point within a feature polygon.
         """
         point = None
 
-        while not point or not feature.GetGeometryRef().Contains(point) or self.is_masked(point):
+        while not point or not feature.GetGeometryRef().Contains(point):
             geometry = feature.GetGeometryRef()
             minx, maxx, miny, maxy = geometry.GetEnvelope()
             x = random.uniform(minx,maxx)
