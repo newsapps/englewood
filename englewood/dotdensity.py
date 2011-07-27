@@ -3,14 +3,17 @@
 import random
 import shutil
 
+from osgeo import gdal
 from osgeo import ogr
+
+gdal.UseExceptions()
 
 class DotDensityPlotter(object):
     """
     Creates dot density maps (as shapefiles) from input boundaries
     and related data.
     """
-    def __init__(self, source, dest, data_callback, dot_size):
+    def __init__(self, source, dest, data_callback, dot_size, masks=[]):
         """
         Takes the name of a boundary shapefile directory, the name of an
         output directory, a callback to fetch data (takes an OGR Feature
@@ -30,6 +33,24 @@ class DotDensityPlotter(object):
 
         self.data_callback = data_callback
         self.dot_size = dot_size
+
+        self.mask_features = []
+        self.mask_envelopes = []
+
+        for mask in masks:
+            geo = ogr.Open(mask)
+            layer = geo.GetLayer(0)
+
+            for feature in layer:
+                self.mask_features.append(feature)
+
+                minx, maxx, miny, maxy = feature.GetGeometryRef().GetEnvelope()
+                wkt = 'POLYGON((%s %s,%s %s,%s %s,%s %s,%s %s))' % \
+                    (minx, miny, minx, maxy,
+                    maxx, maxy, maxx, miny,
+                    minx, miny)
+
+                self.mask_envelopes.append(ogr.CreateGeometryFromWkt(wkt))
 
     def _plot(self, feature):
         """
@@ -53,6 +74,21 @@ class DotDensityPlotter(object):
 
             f.Destroy()
 
+    def is_masked(self, point):
+        """
+        Test if a point is occluded by any mask.
+        """
+        for (i, feature) in enumerate(self.mask_features):
+            envelope = self.mask_envelopes[i]
+
+            if not envelope.Contains(point):
+                continue
+
+            if feature.GetGeometryRef().Contains(point):
+                return True
+    
+        return False
+
     def plot(self):
         """
         Plots dots for all features in the source layer.
@@ -64,8 +100,22 @@ class DotDensityPlotter(object):
 
             feature = self.source_layer.GetNextFeature()
 
-        self.source.Destroy()
-        self.dest.Destroy()
+    def random_point_in_feature(self, feature):
+        """
+        Generate a random point within a feature polygon.
+        """
+        point = None
+
+        while not point or not feature.GetGeometryRef().Contains(point) or self.is_masked(point):
+            geometry = feature.GetGeometryRef()
+            minx, maxx, miny, maxy = geometry.GetEnvelope()
+            x = random.uniform(minx,maxx)
+            y = random.uniform(miny,maxy)
+
+            point = ogr.Geometry(ogr.wkbPoint)
+            point.SetPoint(0, x, y)
+
+        return point
 
     @classmethod  
     def get_group_list(cls, groups, divisor):
@@ -83,22 +133,4 @@ class DotDensityPlotter(object):
         random.shuffle(group_list)
 
         return group_list
-
-    @classmethod
-    def random_point_in_feature(cls, feature):
-        """
-        Generate a random point within a feature polygon.
-        """
-        point = None
-
-        while not point or not feature.GetGeometryRef().Contains(point):
-            geometry = feature.GetGeometryRef()
-            minx, maxx, miny, maxy = geometry.GetEnvelope()
-            x = random.uniform(minx,maxx)
-            y = random.uniform(miny,maxy)
-            
-            wkt = "POINT(%f %f)" % (x,y)
-            point = ogr.CreateGeometryFromWkt(wkt)
-
-        return point
 

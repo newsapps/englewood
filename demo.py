@@ -7,6 +7,7 @@ from englewood import DotDensityPlotter
 
 INPUT_PATH = 'demo/Wards'
 OUTPUT_PATH = 'demo/output'
+MASKS = ['demo/Waterways'] 
 
 # Get ward data from CSV
 # (we could also use data from attributes of the shapefile, a database,
@@ -42,6 +43,7 @@ if not os.path.exists(OUTPUT_PATH):
 # Create a map with one dot for every 25 people of each group
 # Each dot will have an attribute 'GROUP' that will be one of
 # 'asian', 'black', 'hispanic', or 'white'.
-dots = DotDensityPlotter(INPUT_PATH, OUTPUT_PATH, get_data, 25)
+dots = DotDensityPlotter(INPUT_PATH, OUTPUT_PATH, get_data, 25, masks=MASKS)
 dots.plot()
+dots.cleanup()
 
