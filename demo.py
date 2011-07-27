@@ -3,16 +3,22 @@
 import csv
 import os
 
-from englewood import DotDensityPlotter
+from englewood import DotDensityPlotter, mask
 
 INPUT_PATH = 'demo/Wards'
+DATA_PATH = 'demo/ward_data.csv'
 OUTPUT_PATH = 'demo/output'
 MASKS = ['demo/Waterways'] 
+MASKED_PATH = 'demo/masked'
+
+# Generate a masked version of the input
+print 'Generating masked shapefile.'
+mask(INPUT_PATH, MASKED_PATH, MASKS) 
 
 # Get ward data from CSV
 # (we could also use data from attributes of the shapefile, a database,
 #   or any other data source)
-ward_data = csv.DictReader(open('demo/ward_data.csv', 'rU'))
+ward_data = csv.DictReader(open(DATA_PATH, 'rU'))
 
 # Convert ward data to a dict with ward numbers as keys
 ward_data = dict([(d['ward'], d) for d in ward_data])
@@ -43,6 +49,7 @@ if not os.path.exists(OUTPUT_PATH):
 # Create a map with one dot for every 25 people of each group
 # Each dot will have an attribute 'GROUP' that will be one of
 # 'asian', 'black', 'hispanic', or 'white'.
-dots = DotDensityPlotter(INPUT_PATH, OUTPUT_PATH, get_data, 25, masks=MASKS)
+dots = DotDensityPlotter(MASKED_PATH, OUTPUT_PATH, get_data, 25, masks=MASKS)
+print 'Beginning plotting'
 dots.plot()
 

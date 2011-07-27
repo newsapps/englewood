@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import os
 import random
 import shutil
 
@@ -37,48 +36,6 @@ class DotDensityPlotter(object):
 
         self.data_callback = data_callback
         self.dot_size = dot_size
-
-        # If using masks, generate a masked version of the input shapes
-        if masks:
-            try:
-                shutil.rmtree('temp_masked')
-            except OSError:
-                pass
-
-            driver = ogr.GetDriverByName('ESRI Shapefile')
-            masked = driver.CreateDataSource('temp_masked')
-            masked_layer = masked.CreateLayer('temp_masked', geom_type=ogr.wkbMultiPolygon)
-            
-            for i in range(self.source_layer.GetLayerDefn().GetFieldCount()):
-                masked_layer.CreateField(self.source_layer.GetLayerDefn().GetFieldDefn(i))
-
-            mask_features = []
-
-            for mask in masks:
-                geo = ogr.Open(mask)
-                layer = geo.GetLayer(0)
-
-                for feature in layer:
-                    mask_features.append(feature)
-
-            for feature in self.source_layer:
-                masked_feature = ogr.Feature(feature_def=self.source_layer.GetLayerDefn())
-                masked_feature.SetFrom(feature)
-
-                masked_geometry = feature.GetGeometryRef().Clone()
-
-                for mask_feature in mask_features:
-                    masked_geometry = masked_geometry.Difference(mask_feature.GetGeometryRef())
-     
-                masked_feature.SetGeometryDirectly(masked_geometry)
-                masked_layer.CreateFeature(masked_feature)
-
-            masked_layer.SyncToDisk()
-
-            # Substitute masked shapes for input shapes
-            self.source = masked
-            self.source_layer = masked_layer
-            self.source_layer.ResetReading()
 
     def _plot(self, feature):
         """

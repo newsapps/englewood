@@ -3,3 +3,5 @@
 .DS_Store
 build
 dist
+demo/output
+demo/masked
