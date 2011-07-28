@@ -5,3 +5,4 @@ build
 dist
 demo/output
 demo/masked
+*.egg-info
