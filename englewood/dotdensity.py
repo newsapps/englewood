@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import random
-import shutil
 
 from osgeo import gdal
 from osgeo import ogr
@@ -13,23 +12,24 @@ class DotDensityPlotter(object):
     Creates dot density maps (as shapefiles) from input boundaries
     and related data.
     """
-    def __init__(self, source, dest, data_callback, dot_size, masks=[]):
+    def __init__(self, source, source_layer, dest, dest_layer, data_callback, dot_size, masks=[]):
         """
         Takes the name of a boundary shapefile directory, the name of an
         output directory, a callback to fetch data (takes an OGR Feature
         as an argument) and the number of units each dot should represent.
         """
         self.source = ogr.Open(source, False)
-        self.source_layer = self.source.GetLayer(0)
-
-        try:
-            shutil.rmtree(dest)
-        except OSError:
-            pass
+        self.source_layer = self.source.GetLayerByName(source_layer)
 
         driver = ogr.GetDriverByName('ESRI Shapefile')
         self.dest = driver.CreateDataSource(dest)
-        self.dest_layer = self.dest.CreateLayer('dot_density', geom_type=ogr.wkbPoint)
+
+        try:
+            self.dest.DeleteLayer(dest)
+        except ValueError:
+            pass
+
+        self.dest_layer = self.dest.CreateLayer(dest_layer, geom_type=ogr.wkbPoint)
 
         group_field = ogr.FieldDefn('GROUP', ogr.OFTString) 
         self.dest_layer.CreateField(group_field)
