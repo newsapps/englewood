@@ -12,7 +12,7 @@ class DotDensityPlotter(object):
     Creates dot density maps (as shapefiles) from input boundaries
     and related data.
     """
-    def __init__(self, source, source_layer, dest, dest_layer, data_callback, dot_size, masks=[]):
+    def __init__(self, source, source_layer, dest_driver, dest, dest_layer, data_callback, dot_size, masks=[]):
         """
         Takes the name of a boundary shapefile directory, the name of an
         output directory, a callback to fetch data (takes an OGR Feature
@@ -21,11 +21,11 @@ class DotDensityPlotter(object):
         self.source = ogr.Open(source, False)
         self.source_layer = self.source.GetLayerByName(source_layer)
 
-        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver = ogr.GetDriverByName(dest_driver)
         self.dest = driver.CreateDataSource(dest)
 
         try:
-            self.dest.DeleteLayer(dest)
+            self.dest.DeleteLayer(dest_layer)
         except ValueError:
             pass
 
@@ -63,9 +63,7 @@ class DotDensityPlotter(object):
         """
         Plots dots for all features in the source layer.
         """
-        feature = self.source_layer.GetNextFeature()
-
-        while feature:
+        for feature in self.source_layer: 
             self._plot(feature)
 
             feature = self.source_layer.GetNextFeature()

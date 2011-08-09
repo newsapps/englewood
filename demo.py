@@ -45,6 +45,6 @@ if not os.path.exists(OUTPUT_PATH):
 # Create a map with one dot for every 25 people of each group
 # Each dot will have an attribute 'GROUP' that will be one of
 # 'asian', 'black', 'hispanic', or 'white'.
-dots = DotDensityPlotter(INPUT_PATH, INPUT_LAYER, OUTPUT_PATH, OUTPUT_LAYER, get_data, 25)
+dots = DotDensityPlotter(INPUT_PATH, INPUT_LAYER, 'ESRI Shapefile', OUTPUT_PATH, OUTPUT_LAYER, get_data, 25)
 dots.plot()
 
