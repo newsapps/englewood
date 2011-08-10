@@ -8,7 +8,7 @@ def readme(fname):
 
 setup(
     name='englewood',
-    version='0.0.12',
+    version='0.0.13',
     description='Tools for deriving different types of maps from shapefiles.',
     long_description=readme('README.rst'),
     author='Christopher Groskopf',

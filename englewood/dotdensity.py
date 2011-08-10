@@ -20,7 +20,6 @@ class DotDensityPlotter(object):
         """
         self.source = ogr.Open(source, False)
         self.source_layer = self.source.GetLayerByName(source_layer)
-        print self.source_layer.GetFeatureCount()
 
         driver = ogr.GetDriverByName(dest_driver)
         self.dest = driver.CreateDataSource(dest)
