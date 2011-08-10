@@ -20,6 +20,7 @@ class DotDensityPlotter(object):
         """
         self.source = ogr.Open(source, False)
         self.source_layer = self.source.GetLayerByName(source_layer)
+        print self.source_layer.GetFeatureCount()
 
         driver = ogr.GetDriverByName(dest_driver)
         self.dest = driver.CreateDataSource(dest)
@@ -63,10 +64,8 @@ class DotDensityPlotter(object):
         """
         Plots dots for all features in the source layer.
         """
-        for feature in self.source_layer: 
+        for feature in self.source_layer:
             self._plot(feature)
-
-            feature = self.source_layer.GetNextFeature()
 
     @classmethod
     def random_point_in_feature(cls, feature):
